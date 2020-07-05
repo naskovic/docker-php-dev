@@ -1,35 +1,77 @@
-FROM php:7.2-apache
-
-LABEL maintainer="GhazanfarMir@gmail.com"
+FROM php:7.4.2-apache-buster
 
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 
-RUN apt-get update && apt-get install -y apt-utils \
-    build-essential \
-    mariadb-client \
-    unzip \
-    libfreetype6-dev \
-    libjpeg62-turbo-dev \
-    libpng-dev \
-   # libgd2-dev \
-    libjpeg-dev \
-    libgif-dev \
-    && docker-php-ext-install \
-    pdo \
-    pdo_mysql \
-    mbstring \
-    opcache \
-    && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/  \
-    && docker-php-ext-install -j$(nproc) gd \
-    # Install Redis and xDebug
-    && pecl install redis \
-    && pecl install xdebug-2.6.0 \
-    && docker-php-ext-enable redis xdebug \
-    # Install Composer
-    && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
-    && composer --version \
-    # Enable Rewrite
-    && a2enmod rewrite
+# Update
+RUN apt-get -y update --fix-missing && \
+    apt-get upgrade -y && \
+    apt-get --no-install-recommends install -y apt-utils && \
+    rm -rf /var/lib/apt/lists/*
+
+
+# Install useful tools and install important libaries
+RUN apt-get -y update && \
+    apt-get -y --no-install-recommends install nano wget \
+dialog \
+libsqlite3-dev \
+libsqlite3-0 && \
+    apt-get -y --no-install-recommends install default-mysql-client \
+zlib1g-dev \
+libzip-dev \
+libicu-dev && \
+    apt-get -y --no-install-recommends install --fix-missing apt-utils \
+build-essential \
+git \
+curl \
+libonig-dev && \ 
+    apt-get -y --no-install-recommends install --fix-missing libcurl4 \
+libcurl4-openssl-dev \
+zip \
+openssl && \
+    rm -rf /var/lib/apt/lists/* && \
+    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+# Install xdebug
+RUN pecl install xdebug-2.8.0 && \
+    docker-php-ext-enable xdebug
+
+# Install redis
+RUN pecl install redis-5.1.1 && \
+    docker-php-ext-enable redis
+
+# Install imagick
+RUN apt-get update && \
+    apt-get -y --no-install-recommends install --fix-missing libmagickwand-dev && \
+    rm -rf /var/lib/apt/lists/* && \
+    pecl install imagick && \
+    docker-php-ext-enable imagick
+
+# Other PHP7 Extensions
+
+RUN docker-php-ext-install pdo_mysql && \
+    docker-php-ext-install pdo_sqlite && \
+    docker-php-ext-install mysqli && \
+    docker-php-ext-install curl && \
+    docker-php-ext-install tokenizer && \
+    docker-php-ext-install json && \
+    docker-php-ext-install zip && \
+    docker-php-ext-install -j$(nproc) intl && \
+    docker-php-ext-install mbstring && \
+    docker-php-ext-install gettext && \
+    docker-php-ext-install exif
+
+
+# Install Freetype 
+RUN apt-get -y update && \
+    apt-get --no-install-recommends install -y libfreetype6-dev \
+libjpeg62-turbo-dev \
+libpng-dev && \
+    rm -rf /var/lib/apt/lists/* && \
+    docker-php-ext-configure gd --enable-gd --with-freetype --with-jpeg && \
+    docker-php-ext-install gd
+
+# Enable apache modules
+RUN a2enmod rewrite headers
 
 COPY config/php/php.ini /usr/local/etc/php/
 COPY config/apache/vhost.conf /etc/apache2/sites-available/000-default.conf
