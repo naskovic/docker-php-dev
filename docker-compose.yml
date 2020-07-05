@@ -57,5 +57,16 @@ services:
       networks:
         - devnet
 
+    solr:
+      image: "solr:6.6.6"
+      ports:
+        - "8983:8983"
+      volumes:
+        - ./docker/solr/impoqo:/opt/solr/server/solr/mycores/
+      entrypoint:
+        - bash
+        - "-c"
+        - "precreate-core impoqo; exec solr -f"
+
 volumes:
     db_data:
